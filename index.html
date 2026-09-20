@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Para Majo y Val 🌻</title>
+    
+    <!-- Fuente que imita la escritura a mano -->
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Three.js y OrbitControls desde CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: #000000;
+            font-family: 'Caveat', cursive;
+            overflow: hidden;
+        }
+
+        /* --- PANTALLA DE INICIO --- */
+        #intro-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            transition: opacity 1.5s ease-in-out;
+            cursor: pointer;
+        }
+
+        .intro-flower {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.8));
+            animation: pulseGlow 2s infinite alternate;
+        }
+
+        .intro-text {
+            color: #FFF2A8;
+            font-size: 2.2rem;
+            letter-spacing: 2px;
+            font-weight: 500;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        @keyframes pulseGlow {
+            0% { filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.5)) scale(1); }
+            100% { filter: drop-shadow(0 0 40px rgba(255, 215, 0, 1)) scale(1.05); }
+        }
+
+        /* --- CONTENEDORES 3D Y UI --- */
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #labels-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        /* --- TEXTOS FLOTANTES --- */
+        .floating-label {
+            position: absolute;
+            color: rgba(255, 250, 200, 0.9);
+            font-family: 'Caveat', cursive;
+            white-space: nowrap;
+            transform: translate(-50%, -50%);
+            transition: opacity 0.2s ease-out;
+            pointer-events: auto;
+            cursor: default;
+        }
+
+        .label-main {
+            font-size: 3.5rem;
+            color: #FFE066;
+            text-shadow: 0 0 15px rgba(255, 150, 0, 0.8);
+            font-weight: 700;
+            z-index: 100;
+        }
+
+        .label-medium {
+            font-size: 2rem;
+            color: #FFF9D2;
+            text-shadow: 0 0 8px rgba(200, 150, 0, 0.5);
+        }
+
+        .label-small {
+            font-size: 1.4rem;
+            color: #E6E0C8;
+            opacity: 0.85;
+        }
+
+        /* --- FOTO FLOTANTE --- */
+        .photo-wrapper {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            transition: opacity 0.2s ease-out;
+            pointer-events: auto;
+            z-index: 50;
+        }
+
+        .photo-wrapper img {
+            width: 250px;
+            height: auto;
+            border: 8px solid white;
+            border-bottom: 30px solid white;
+            border-radius: 4px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8), 0 0 20px rgba(255, 215, 0, 0.4);
+            transform: rotate(-8deg);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .photo-wrapper img:hover {
+            transform: rotate(0deg) scale(1.15);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.9), 0 0 40px rgba(255, 215, 0, 0.8);
+            z-index: 200;
+        }
+
+        /* --- FLORES Y RAMOS FLOTANTES --- */
+        .floating-icon {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            transition: opacity 0.2s ease-out, transform 0.3s ease;
+            pointer-events: auto;
+            cursor: pointer;
+            filter: drop-shadow(0 0 10px rgba(255, 200, 0, 0.4));
+        }
+
+        .floating-icon:hover {
+            filter: drop-shadow(0 0 20px rgba(255, 200, 0, 0.9));
+        }
+
+        /* --- BOTÓN DE MÚSICA --- */
+        #music-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(30, 30, 30, 0.6);
+            border: 2px solid rgba(255, 215, 0, 0.5);
+            color: #FFD700;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            pointer-events: auto;
+            z-index: 1000;
+            font-size: 24px;
+            transition: all 0.3s;
+        }
+
+        #music-btn:hover {
+            background: rgba(255, 215, 0, 0.2);
+            transform: scale(1.1);
+        }
+
+        /* Mensajes al hacer click */
+        .toast {
+            position: absolute;
+            background: rgba(20, 20, 20, 0.9);
+            border: 1px solid #FFD700;
+            color: #FFF2A8;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 1.5rem;
+            pointer-events: none;
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.5);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 500;
+            box-shadow: 0 0 20px rgba(255, 200, 0, 0.3);
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translate(-50%, -100%) scale(1);
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Audio Local -->
+    <audio id="bg-music" loop preload="auto">
+        <source src="floresamarillas.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Pantalla de Inicio -->
+    <div id="intro-screen">
+        <svg class="intro-flower" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <g id="flower">
+                <path d="M50 60 Q50 90 50 100" stroke="#5C8C46" stroke-width="6" stroke-linecap="round" fill="none"/>
+                <path d="M50 85 Q35 90 30 75 Q45 70 50 85" fill="#5C8C46"/>
+                <path d="M50 75 Q65 80 70 65 Q55 60 50 75" fill="#5C8C46"/>
+                <g fill="#F2A900">
+                    <circle cx="50" cy="20" r="8"/> <circle cx="50" cy="80" r="8"/>
+                    <circle cx="20" cy="50" r="8"/> <circle cx="80" cy="50" r="8"/>
+                    <circle cx="28" cy="28" r="8"/> <circle cx="72" cy="72" r="8"/>
+                    <circle cx="28" cy="72" r="8"/> <circle cx="72" cy="28" r="8"/>
+                </g>
+                <g fill="#FFD700">
+                    <circle cx="50" cy="25" r="8"/> <circle cx="50" cy="75" r="8"/>
+                    <circle cx="25" cy="50" r="8"/> <circle cx="75" cy="50" r="8"/>
+                    <circle cx="32" cy="32" r="8"/> <circle cx="68" cy="68" r="8"/>
+                    <circle cx="32" cy="68" r="8"/> <circle cx="68" cy="32" r="8"/>
+                </g>
+                <circle cx="50" cy="50" r="18" fill="#4A3018"/>
+                <circle cx="50" cy="50" r="14" fill="#3B2411" stroke="#5D3A1F" stroke-width="2" stroke-dasharray="2,2"/>
+                <path d="M40 40 L60 60 M40 60 L60 40 M50 35 L50 65 M35 50 L65 50" stroke="#2A170A" stroke-width="1" opacity="0.5"/>
+            </g>
+        </svg>
+        <div class="intro-text">Toca para iniciar</div>
+    </div>
+
+    <!-- Contenedores -->
+    <div id="canvas-container"></div>
+    <div id="labels-container"></div>
+    <button id="music-btn">🎵</button>
+    <div id="toast-message" class="toast"></div>
+
+    <script>
+        const music = document.getElementById('bg-music');
+        const musicBtn = document.getElementById('music-btn');
+        const introScreen = document.getElementById('intro-screen');
+        let isStarted = false;
+        let isMusicPlaying = false;
+
+        const container = document.getElementById('canvas-container');
+        const labelsContainer = document.getElementById('labels-container');
+        
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000); 
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.z = 100;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enablePan = false;
+        controls.enableZoom = true;
+        controls.minDistance = 50;
+        controls.maxDistance = 200;
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.5;
+
+        // 1. El Planeta Negro
+        const planetGeo = new THREE.SphereGeometry(18, 64, 64);
+        const planetMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const planet = new THREE.Mesh(planetGeo, planetMat);
+        scene.add(planet);
+
+        // 2. El Anillo Brillante
+        function createRingTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            const center = 256;
+
+            const gradient = ctx.createRadialGradient(center, center, 100, center, center, 256);
+            gradient.addColorStop(0.0, 'rgba(255, 255, 255, 1)');     
+            gradient.addColorStop(0.2, 'rgba(255, 230, 100, 0.9)');   
+            gradient.addColorStop(0.4, 'rgba(255, 170, 0, 0.8)');     
+            gradient.addColorStop(0.7, 'rgba(150, 70, 0, 0.4)');      
+            gradient.addColorStop(1.0, 'rgba(0, 0, 0, 0)');           
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 512, 512);
+
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.beginPath(); ctx.arc(center, center, 150, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(center, center, 190, 0, Math.PI*2); ctx.stroke();
+            ctx.strokeStyle = 'rgba(255, 200, 0, 0.1)';
+            ctx.lineWidth = 5;
+            ctx.beginPath(); ctx.arc(center, center, 220, 0, Math.PI*2); ctx.stroke();
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        const ringTexture = createRingTexture();
+        const ringGeo = new THREE.PlaneGeometry(80, 80);
+        const ringMat = new THREE.MeshBasicMaterial({
+            map: ringTexture,
+            transparent: true,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = Math.PI / 1.7; 
+        scene.add(ring);
+
+        // 3. Estrellas
+        function createStars() {
+            const starsGeo = new THREE.BufferGeometry();
+            const starsCount = 1500;
+            const posArray = new Float32Array(starsCount * 3);
+            for(let i = 0; i < starsCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 600;
+            }
+            starsGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const starsMat = new THREE.PointsMaterial({
+                size: 1.5,
+                color: 0xFFFFFF,
+                transparent: true,
+                opacity: 0.8
+            });
+            return new THREE.Points(starsGeo, starsMat);
+        }
+        scene.add(createStars());
+
+        const texts = [
+            { text: "Feliz Día de las Flores Amarillas chicas", type: "main", pos: [0, 30, 0] },
+            { text: "Para Majo y Val, Att: Daniel 💛", type: "main", pos: [0, -35, 30] },
+            
+            { text: "Gracias por su amistad", type: "medium", pos: [-35, -10, 15] },
+            { text: "Son las mejores", type: "medium", pos: [0, -30, 20] },
+            { text: "Las quiero muchísimo", type: "medium", pos: [35, 5, -15] },
+            { text: "Por más locuras y risas juntas", type: "medium", pos: [40, -15, 10] },
+            { text: "Qué haría yo sin ustedes", type: "medium", pos: [-25, -25, -10] },
+            { text: "Nuestra amistad vale oro", type: "medium", pos: [-40, 15, -20] },
+            
+            { text: "Amigas como ustedes hay pocas", type: "small", pos: [20, -45, 0] },
+            { text: "Flores amarillas para mis favs", type: "small", pos: [-20, 10, 25] },
+            { text: "Gracias por aguantarme siempre", type: "small", pos: [25, 20, 10] },
+            { text: "Un pequeño detalle para ustedes", type: "small", pos: [15, 35, -5] },
+            { text: "Mejores amigas", type: "small", pos: [-30, 30, 5] },
+            { text: "Siempre juntas", type: "small", pos: [0, 40, -20] },
+            { text: "Por muchos años más de amistad", type: "small", pos: [35, 25, -25] },
+            { text: "Las locas de siempre", type: "small", pos: [-45, 0, 5] }
+        ];
+
+        const icons = [
+            { icon: "🌻", size: "80px", pos: [35, -10, 25] }, 
+            { icon: "💐", size: "60px", pos: [-30, 5, 30] },  
+            { icon: "🌻", size: "40px", pos: [-15, -15, 20] },
+            { icon: "💐", size: "50px", pos: [10, -20, 35] },
+            { icon: "🌻", size: "30px", pos: [20, 15, -15] },
+            { icon: "🌻", size: "45px", pos: [-25, 20, -10] },
+            { icon: "💐", size: "40px", pos: [30, -25, 5] },
+            { icon: "🌻", size: "25px", pos: [5, 30, 15] },
+            { icon: "🌻", size: "35px", pos: [-10, -35, 5] }
+        ];
+
+        const clickMessages = [
+            "🌻 Para la mejor amiga",
+            "✨ ¡Las quiero!",
+            "💛 Gracias por tanto",
+            "😂 Por más momentos así",
+            "💐 Son increíbles"
+        ];
+
+        const raycaster = new THREE.Raycaster();
+        const htmlElements = [];
+
+        function addHtmlElement(content, type, size, position, isIcon = false) {
+            const el = document.createElement('div');
+            el.innerHTML = content;
+            
+            if (isIcon) {
+                el.className = 'floating-icon';
+                el.style.fontSize = size;
+                el.addEventListener('click', (e) => {
+                    const msg = clickMessages[Math.floor(Math.random() * clickMessages.length)];
+                    showToast(e.clientX, e.clientY, msg);
+                });
+            } else {
+                el.className = `floating-label label-${type}`;
+            }
+
+            labelsContainer.appendChild(el);
+            htmlElements.push({
+                element: el,
+                pos: new THREE.Vector3(position[0], position[1], position[2]),
+                isIcon: isIcon,
+                isPhoto: false
+            });
+        }
+
+        function addPhotoElement() {
+            const el = document.createElement('div');
+            el.className = 'photo-wrapper';
+            // Usa exactamente foto.jpeg con las comillas invertidas (backticks)
+            el.innerHTML = `<img src="foto.jpeg" alt="Majo y Val" title="¡Las mejores!">`;
+            
+            labelsContainer.appendChild(el);
+            
+            htmlElements.push({
+                element: el,
+                pos: new THREE.Vector3(25, 15, 20), 
+                isIcon: false,
+                isPhoto: true
+            });
+            
+            el.addEventListener('click', (e) => {
+                showToast(e.clientX, e.clientY, "📸 ¡Tremenda foto!");
+            });
+        }
+
+        texts.forEach(item => addHtmlElement(item.text, item.type, null, item.pos, false));
+        icons.forEach(item => addHtmlElement(item.icon, null, item.size, item.pos, true));
+        addPhotoElement(); 
+
+        const tempV = new THREE.Vector3();
+        function updateLabelsPosition() {
+            htmlElements.forEach(item => {
+                tempV.copy(item.pos);
+                
+                raycaster.setFromCamera(tempV.clone().project(camera), camera);
+                const intersects = raycaster.intersectObject(planet);
+                
+                let isObstructed = false;
+                if (intersects.length > 0) {
+                    if (intersects[0].distance < camera.position.distanceTo(item.pos)) {
+                        isObstructed = true;
+                    }
+                }
+
+                tempV.project(camera);
+
+                if (tempV.z > 1 || isObstructed) {
+                    item.element.style.opacity = '0';
+                    item.element.style.pointerEvents = 'none';
+                } else {
+                    item.element.style.opacity = '1';
+                    item.element.style.pointerEvents = 'auto';
+                    
+                    const x = (tempV.x * 0.5 + 0.5) * window.innerWidth;
+                    const y = (tempV.y * -0.5 + 0.5) * window.innerHeight;
+                    
+                    const time = Date.now() * 0.001;
+                    const floatX = Math.sin(time + item.pos.x) * 5;
+                    const floatY = Math.cos(time + item.pos.y) * 5;
+
+                    item.element.style.transform = `translate(-50%, -50%) translate(${x + floatX}px, ${y + floatY}px)`;
+                    
+                    const scale = Math.max(0.3, 1 - (camera.position.distanceTo(item.pos) / 300));
+                    
+                    if(item.isIcon || item.isPhoto) {
+                         item.element.style.transform += ` scale(${scale})`;
+                    } else {
+                         item.element.style.transform += ` scale(${scale})`;
+                    }
+                }
+            });
+        }
+
+        function showToast(x, y, text) {
+            const toast = document.getElementById('toast-message');
+            toast.innerText = text;
+            toast.style.left = `${x}px`;
+            toast.style.top = `${y}px`;
+            
+            toast.classList.remove('show');
+            void toast.offsetWidth; 
+            toast.classList.add('show');
+            
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Inicio interactivo (Con corrección de dobles clics)
+        introScreen.addEventListener('click', () => {
+            if (isStarted) return; 
+            isStarted = true;
+            introScreen.style.pointerEvents = 'none'; 
+
+            const playPromise = music.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    isMusicPlaying = true;
+                    musicBtn.innerText = '🎵';
+                }).catch(e => {
+                    console.log("Audio bloqueado o no encontrado:", e);
+                    musicBtn.innerText = '🔇';
+                    isMusicPlaying = false;
+                    showToast(window.innerWidth / 2, window.innerHeight - 100, "⚠️ Asegúrate de tener floresamarillas.mp3 junto al html");
+                });
+            }
+
+            introScreen.style.opacity = '0';
+            setTimeout(() => {
+                introScreen.style.display = 'none';
+            }, 1500);
+        });
+
+        musicBtn.addEventListener('click', () => {
+            if (isMusicPlaying) {
+                music.pause();
+                isMusicPlaying = false;
+                musicBtn.innerText = '🔇';
+            } else {
+                const playPromise = music.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        isMusicPlaying = true;
+                        musicBtn.innerText = '🎵';
+                    }).catch(e => {
+                        console.log("Error al reproducir:", e);
+                        isMusicPlaying = false;
+                        showToast(window.innerWidth / 2, window.innerHeight - 100, "⚠️ Verifica el archivo floresamarillas.mp3");
+                    });
+                }
+            }
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            ring.rotation.z += 0.001;
+
+            if (isStarted) {
+                updateLabelsPosition();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+    </script>
+</body>
+</html>
